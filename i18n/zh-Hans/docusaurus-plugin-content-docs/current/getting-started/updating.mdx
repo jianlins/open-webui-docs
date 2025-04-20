@@ -1,0 +1,146 @@
+---
+sidebar_position: 300 
+title: "🔄 更新 Open WebUI"
+---
+
+
+
+## 为什么我的 Open WebUI 没有更新？
+
+要将本地 Docker 安装的 Open WebUI 更新到最新版本，您可以使用 **Watchtower** 或手动更新容器。按照以下步骤之一操作，指导您更新现有的 Open WebUI 镜像。
+
+### 手动更新
+
+1. **停止并移除当前容器**：
+
+   这将停止正在运行的容器并将其移除，但不会删除存储在 Docker 卷中的数据。（如果您的容器名称不同，请在整个更新过程中将 `open-webui` 替换为您的容器名称。）
+
+```bash
+docker rm -f open-webui
+```
+
+2. **拉取最新的 Docker 镜像**：
+
+   这将更新 Docker 镜像，但不会更新正在运行的容器或其数据。
+
+```bash
+docker pull ghcr.io/open-webui/open-webui:main
+```
+
+
+::::info
+**移除 Docker 卷中的任何现有数据（除非绝对必要，否则不推荐！）**。如果不需要，请完全跳过此步骤并继续执行最后一步：
+
+   如果您想从头开始，可以移除 Docker 卷中的现有数据。请小心，因为这将删除所有聊天历史和其他数据。
+
+   数据存储在名为 `open-webui` 的 Docker 卷中。您可以使用以下命令移除它：
+
+```bash
+docker volume rm open-webui
+```
+::::
+
+3. **使用更新的镜像和附加的现有卷再次启动容器**：
+
+   如果您没有移除现有数据，这将使用更新的镜像和现有数据启动容器。如果您移除了现有数据，这将使用更新的镜像和一个新的、空的卷启动容器。**对于 Nvidia GPU 支持，在 docker run 命令中添加 `--gpus all`**
+
+```bash
+docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui ghcr.io/open-webui/open-webui:main
+```
+
+## 每次更新后都被登出？
+如果您发现每次更新后都被登出，请确保在环境变量中设置了 `WEBUI_SECRET_KEY`。如果没有一致定义此密钥，您的身份验证会话可能会在更新后失效。
+
+要持久设置 `WEBUI_SECRET_KEY`，在运行 Docker 容器时包含它：
+
+```bash
+docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui -e WEBUI_SECRET_KEY=your_secret_key ghcr.io/open-webui/open-webui:main
+```
+
+或者，如果使用 **docker-compose**，在 `environment` 部分下添加它：
+
+```yml
+version: '3'
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - WEBUI_SECRET_KEY=your_secret_key
+```
+
+有关环境变量设置的更多详情，请查看 [Open WebUI 安全变量文档](https://docs.openwebui.com/getting-started/env-configuration#security-variables)。
+
+## 使用 Watchtower 自动更新 Open WebUI
+
+您可以使用 [Watchtower](https://containrrr.dev/watchtower/) 自动化 Open WebUI 的更新过程。以下是三个选项：
+
+### 选项 1：一次性更新
+
+您可以运行 Watchtower 作为一次性更新，停止当前容器，拉取最新镜像，并使用更新的镜像和现有卷启动新容器（**对于 Nvidia GPU 支持，在 docker run 命令中添加 `--gpus all`**）：
+
+```bash
+docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
+```
+
+### 选项 2：将 Watchtower 作为单独的容器运行
+
+您可以将 Watchtower 作为单独的容器运行，监视并更新您的 Open WebUI 容器：
+
+```bash
+docker run -d --name watchtower \
+  --volume /var/run/docker.sock:/var/run/docker.sock \
+  containrrr/watchtower -i 300 open-webui
+```
+
+这将以分离模式启动 Watchtower，每 5 分钟监视一次您的 Open WebUI 容器是否有更新。
+
+### 选项 3：将 Watchtower 与 `docker-compose.yml` 文件集成
+
+您还可以将 Watchtower 与您的 `docker-compose.yml` 文件集成，为 Open WebUI 自动更新（**对于 Nvidia GPU 支持，在 docker run 命令中添加 `--gpus all`**）：
+
+```yml
+version: '3'
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 open-webui
+    depends_on:
+      - open-webui
+
+volumes:
+  open-webui:
+```
+
+在此示例中，Watchtower 与 `docker-compose.yml` 文件集成，并每 5 分钟监视一次 Open WebUI 容器是否有更新。
+
+## Docker 卷中的持久数据
+
+数据存储在名为 `open-webui` 的 Docker 卷中。卷的路径不能直接访问，但您可以使用以下命令检查卷：
+
+```bash
+docker volume inspect open-webui
+```
+
+这将显示卷的详细信息，包括挂载点，通常位于 `/var/lib/docker/volumes/open-webui/_data`。  
+
+在 Windows 10 + WSL 2 上，Docker 卷位于以下位置（在 Windows 文件资源管理器中输入）： 
+- \\\wsl$\docker-desktop\mnt\docker-desktop-disk\data\docker\volumes
+
+对于较旧版本的 Docker（Docker v26.1.4 之前）：
+- \\\wsl$\docker-desktop-data\data\docker\volumes
+- \\\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes
+
+_（Windows 答案归功于 StackOverflow 用户 sarye-haddadi；[原始 SO 帖子链接](https://stackoverflow.com/questions/43181654/locating-data-volumes-in-docker-desktop-windows)）_

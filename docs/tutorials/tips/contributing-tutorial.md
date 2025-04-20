@@ -116,3 +116,102 @@ This will help you catch any issues before deploying
 :::
 
 ---
+
+## 🌍 Contributing to Multilingual Documentation
+
+Open WebUI documentation supports multiple languages, allowing users from different regions to access content in their preferred language. This section provides guidelines for contributing to multilingual documentation.
+
+### Setting Up Multilingual Support
+
+The project uses Docusaurus's i18n feature for multilingual support. The current supported languages are:
+
+- English (default, `en`)
+- Simplified Chinese (`zh-Hans`)
+
+To set up or modify multilingual support:
+
+1. **Understand the Directory Structure**:
+   - Original content (English): `docs/`
+   - Translated content: `i18n/[language-code]/docusaurus-plugin-content-docs/current/`
+
+2. **Configure Language Support**:
+   - Language configuration is in `docusaurus.config.ts` under the `i18n` section:
+   ```typescript
+   i18n: {
+     defaultLocale: "en",
+     locales: ["en", "zh-Hans"],
+   },
+   ```
+
+### Adding a New Language
+
+To add support for a new language:
+
+1. **Update Configuration**:
+   - Add your language code to the `locales` array in `docusaurus.config.ts`:
+   ```typescript
+   i18n: {
+     defaultLocale: "en",
+     locales: ["en", "zh-Hans", "your-language-code"],
+   },
+   ```
+
+2. **Create Directory Structure**:
+   - Create the following directory structure:
+   ```
+   i18n/[your-language-code]/docusaurus-plugin-content-docs/current/
+   ```
+
+3. **Add Translated Content**:
+   - Copy the directory structure from `docs/` to your language directory
+   - Translate the content while maintaining the same file structure and names
+   - Preserve all frontmatter, component imports, and markdown formatting
+
+4. **Example**:
+   For adding French (`fr`) support:
+   ```
+   i18n/fr/docusaurus-plugin-content-docs/current/
+   ```
+
+### Revising Multilingual Pages
+
+When revising existing multilingual content:
+
+1. **Maintain Consistency**:
+   - Ensure translations accurately reflect the original content
+   - Keep the same file structure and names across all languages
+   - Preserve all frontmatter, component imports, and markdown formatting
+
+2. **Update All Language Versions**:
+   - When making significant changes to the English content, update all translated versions
+   - Add a note in your PR if translations need to be updated
+
+3. **Best Practices**:
+   - Keep technical terms consistent across languages
+   - Maintain the same links and references in all translations
+   - Ensure code blocks remain identical (don't translate code unless it's in comments)
+
+### Testing Multilingual Setup
+
+To test your multilingual changes:
+
+1. **Run the Test Script**:
+   ```bash
+   scripts\test-i18n.bat
+   ```
+   This script:
+   - Installs dependencies
+   - Builds the documentation with translations
+   - Starts the development server
+
+2. **Access Different Language Versions**:
+   - English: http://localhost:3000/
+   - Simplified Chinese: http://localhost:3000/zh-Hans/
+   - Your language: http://localhost:3000/[your-language-code]/
+
+3. **Verify Your Changes**:
+   - Check that all pages render correctly in each language
+   - Ensure navigation works properly
+   - Verify that all links and references work as expected
+
+By following these guidelines, you'll help maintain a high-quality multilingual documentation experience for all Open WebUI users.

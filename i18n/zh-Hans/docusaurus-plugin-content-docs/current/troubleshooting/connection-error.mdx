@@ -1,0 +1,71 @@
+---
+sidebar_position: 0
+title: "🚧 服务器连接问题"
+---
+
+我们在这里帮助您顺利设置和运行一切。下面，您将找到针对不同场景的分步说明，以解决与 Ollama 和 Hugging Face 等外部服务器的常见连接问题。
+
+## 🌟 连接到 Ollama 服务器
+
+### 🚀 从 Open WebUI 访问 Ollama
+
+从 Open WebUI 连接到 Ollama 时遇到困难？这可能是因为 Ollama 没有在允许外部连接的网络接口上监听。让我们解决这个问题：
+
+1. **配置 Ollama 广泛监听** 🎧：
+   将 `OLLAMA_HOST` 设置为 `0.0.0.0`，使 Ollama 在所有网络接口上监听。
+
+2. **更新环境变量**：
+   确保在您的部署环境中准确设置了 `OLLAMA_HOST`。
+
+3. **重启 Ollama**🔄：
+   需要重启才能使更改生效。
+
+💡 设置完成后，通过访问 WebUI 界面验证 Ollama 是否可访问。
+
+有关配置 Ollama 的更详细说明，请参阅 [Ollama 官方文档](https://github.com/ollama/ollama/blob/main/docs/faq.md#setting-environment-variables-on-linux)。
+
+### 🐳 Docker 连接错误
+
+如果您在尝试访问 Ollama 时看到连接错误，可能是因为 WebUI docker 容器无法与在您主机上运行的 Ollama 服务器通信。让我们解决这个问题：
+
+1. **调整网络设置** 🛠️：
+   在 Docker 命令中使用 `--network=host` 标志。这将您的容器直接链接到您主机的网络。
+
+2. **更改端口**：
+   请记住，内部端口从 3000 更改为 8080。
+
+**Docker 命令示例**：
+```bash
+docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+🔗 运行上述命令后，您的 WebUI 应该可以在 `http://localhost:8080` 访问。
+
+## 🔒 与 Hugging Face 的 SSL 连接问题
+
+遇到 SSL 错误？可能是 Hugging Face 服务器的问题。以下是解决方法：
+
+1. **检查 Hugging Face 服务器状态**：
+   验证他们那边是否有已知的停机或问题。
+
+2. **切换端点**：
+   如果 Hugging Face 宕机，在 Docker 命令中切换端点。
+
+**连接问题的 Docker 命令示例**：
+```bash
+docker run -d -p 3000:8080 -e HF_ENDPOINT=https://hf-mirror.com/ --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+
+## 🍏 MacOS 上的 Podman
+
+在 MacOS 上使用 Podman？以下是确保连接的方法：
+
+1. **启用主机环回**：
+   在命令中使用 `--network slirp4netns:allow_host_loopback=true`。
+
+2. **设置 OLLAMA_BASE_URL**：
+   确保它指向 `http://host.containers.internal:11434`。
+
+**Podman 命令示例**：
+```bash
+podman run -d --network slirp4netns:allow_host_loopback=true -p 3000:8080 -e OLLAMA_BASE_URL=http://host.containers.internal:11434 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
