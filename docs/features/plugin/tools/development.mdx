@@ -50,73 +50,11 @@ class Tools:
 ```
 
 ### Type Hints
-Each tool must have type hints for arguments. As of version Open WebUI version 0.4.3, the types may also be nested, such as `queries_and_docs: list[tuple[str, int]]`. Those type hints are used to generate the JSON schema that is sent to the model. Tools without type hints will work with a lot less consistency.
+Each tool must have type hints for arguments. The types may also be nested, such as `queries_and_docs: list[tuple[str, int]]`. Those type hints are used to generate the JSON schema that is sent to the model. Tools without type hints will work with a lot less consistency.
 
 ### Valves and UserValves - (optional, but HIGHLY encouraged)
 
-Valves and UserValves are used to allow users to provide dynamic details such as an API key or a configuration option. These will create a fillable field or a bool switch in the GUI menu for the given function.
-
-Valves are configurable by admins alone and UserValves are configurable by any users.
-
-<details>
-<summary>Commented example</summary>
- 
- ```
-from pydantic import BaseModel, Field
-
-class Tools:
-    # Notice the current indentation: Valves and UserValves must be declared as
-    # attributes of a Tools, Filter or Pipe class. Here we take the
-    # example of a Tool.
-     class Valves(BaseModel):
-        # Valves and UserValves inherit from pydantic's BaseModel. This
-        # enables complex use cases like model validators etc.
-        test_valve: int = Field(  # Notice the type hint: it is used to
-            # choose the kind of UI element to show the user (buttons,
-            # texts, etc).
-            default=4,
-            description="A valve controlling a numberical value"
-            # required=False,  # you can enforce fields using True
-         )
-         pass
-        # Note that this 'pass' helps for parsing and is recommended.
- 
-    # UserValves are defined the same way.
-    class UserValves(BaseModel):
-        test_user_valve: bool = Field(
-            default=False, description="A user valve controlling a True/False (on/off) switch"
-        )
-        pass
-
-    def __init__(self):
-        self.valves = self.Valves()
-        # Because they are set by the admin, they are accessible directly
-        # upon code execution.
-        pass
-
-    # The  __user__ handling is the same for Filters, Tools and Functions.
-    def test_the_tool(self, message: str, __user__: dict):
-        """
-        This is a test tool. If the user asks you to test the tools, put any
-        string you want in the message argument.
-
-        :param message: Any string you want.
-        :return: The same string as input.
-        """
-        # Because UserValves are defined per user they are only available
-        # on use.
-        # Note that although __user__ is a dict, __user__["valves"] is a
-        # UserValves object. Hence you can access values like that:
-        test_user_valve = __user__["valves"].test_user_valve
-        # Or:
-        test_user_valve = dict(__user__["valves"])["test_user_valve"]
-        # But this will return the default value instead of the actual value:
-        # test_user_valve = __user__["valves"]["test_user_valve"]  # Do not do that!
-        
-        return message + f"\nThe user valve set value is: {test_user_valve}"
-        
-```
-</details>
+Valves and UserValves are used for specifying customizable settings of the Tool, you can read more on the dedicated [Valves & UserValves](../valves/index.mdx) page.
 
 ### Optional Arguments
 Below is a list of optional arguments your tools can depend on:
@@ -126,7 +64,7 @@ Below is a list of optional arguments your tools can depend on:
 - `__metadata__`: Dictionary with chat metadata
 - `__messages__`: List of previous messages
 - `__files__`: Attached files
-- `__model__`: Model name
+- `__model__`: A dictionary with model information
 
 Just add them as argument to any method of your Tool class just like `__user__` in the example above.
 
@@ -140,7 +78,7 @@ If the model seems to be unable to call the tool, make sure it is enabled (eithe
 #### Status
 This is used to add statuses to a message while it is performing steps. These can be done at any stage during the Tool. These statuses appear right above the message content. These are very useful for Tools that delay the LLM response or process large amounts of information. This allows you to inform users what is being processed in real-time.
 
-```
+```python
 await __event_emitter__(
             {
                 "type": "status", # We set the type here
@@ -153,7 +91,7 @@ await __event_emitter__(
 <details>
 <summary>Example</summary>
 
-```
+```python
 async def test_function(
         self, prompt: str, __user__: dict, __event_emitter__=None
     ) -> str:
@@ -196,7 +134,7 @@ async def test_function(
 #### Message
 This type is used to append a message to the LLM at any stage in the Tool. This means that you can append messages, embed images, and even render web pages before, or after, or during the LLM response.
 
-```
+```python
 await __event_emitter__(
                     {
                         "type": "message", # We set the type here
@@ -209,7 +147,7 @@ await __event_emitter__(
 <details>
 <summary>Example</summary>
 
-```
+```python
 async def test_function(
         self, prompt: str, __user__: dict, __event_emitter__=None
     ) -> str:
@@ -242,7 +180,7 @@ async def test_function(
 #### Citations
 This type is used to provide citations or references in the chat. You can utilize it to specify the content, the source, and any relevant metadata. Below is an example of how to emit a citation event:
 
-```
+```python
 await __event_emitter__(
     {
         "type": "citation",
@@ -271,7 +209,7 @@ Warning: if you set `self.citation = True`, this will replace any custom citatio
 <details>
 <summary>Example</summary>
 
-```
+```python
 class Tools:
     class UserValves(BaseModel):
         test: bool = Field(
@@ -320,7 +258,7 @@ No measures are taken to handle package conflicts with Open WebUI's requirements
 <details>
 <summary>Example</summary>
 
-```
+```python
 """
 title: myToolName
 author: myName

@@ -13,7 +13,7 @@ As new variables are introduced, this page will be updated to reflect the growin
 
 :::info
 
-This page is up-to-date with Open WebUI release version [v0.6.5](https://github.com/open-webui/open-webui/releases/tag/v0.6.5), but is still a work in progress to later include more accurate descriptions, listing out options available for environment variables, defaults, and improving descriptions.
+This page is up-to-date with Open WebUI release version [v0.6.9](https://github.com/open-webui/open-webui/releases/tag/v0.6.9), but is still a work in progress to later include more accurate descriptions, listing out options available for environment variables, defaults, and improving descriptions.
 
 :::
 
@@ -31,6 +31,8 @@ You can update the values of `PersistentConfig` environment variables directly f
 
 Please note that `PersistentConfig` environment variables are clearly marked as such in the documentation below, so you can be aware of how they will behave.
 
+To disable `PersistentConfig` and have Open WebUI treat all variables equally, you can set `ENABLE_PERSISTENT_CONFIG` to `False`.
+
 :::
 
 ## App/Backend
@@ -46,8 +48,20 @@ environment variables, see our [logging documentation](https://docs.openwebui.co
 
 - Type: `str`
 - Default: `http://localhost:3000`
-- Description: Specifies the URL where the Open WebUI is reachable. Currently used for search engine support.
+- Description: Specifies the URL where your Open WebUI installation is reachable. Needed for search engine support and OAuth/SSO.
 - Persistence: This environment variable is a `PersistentConfig` variable.
+
+:::warning
+
+This variable has to be set before you start using OAuth/SSO for authentication.
+Since this is a persistent config environment variable, you can only change it through one of the following options:
+
+ - Temporarily disabling persistent config using `ENABLE_PERSISTENT_CONFIG`
+ - Changing `WEBUI_URL` in the admin panel > settings and changing "WebUI URL".
+
+Failure to set WEBUI_URL before using OAuth/SSO will result in failure to log in.
+
+:::
 
 #### `ENABLE_SIGNUP`
 
@@ -95,6 +109,20 @@ is also being used and set to `True`. Failure to do so will result in the inabil
 - Description: Sets the default role assigned to new users.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
+#### `PENDING_USER_OVERLAY_TITLE`
+
+- Type: `str`
+- Default: Empty string (' ')
+- Description: Sets a custom title for the pending user overlay.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `PENDING_USER_OVERLAY_CONTENT`
+
+- Type: `str`
+- Default: Empty string (' ')
+- Description: Sets a custom text content for the pending user overlay.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
 #### `ENABLE_CHANNELS`
 
 - Type: `bool`
@@ -126,6 +154,19 @@ is also being used and set to `True`. Failure to do so will result in the inabil
 - Default: `True`
 - Description: Enables or disables user webhooks.
 - Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `RESPONSE_WATERMARK`
+
+- Type: `str`
+- Default: Empty string (' ')
+- Description: Sets a custom text that will be included when you copy a message in the chat. E.g. `"This text is AI generated"` -> will add "This text is AI generated" to every message, when copied.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `THREAD_POOL_SIZE`
+
+- Type: `int`
+- Default: `0`
+- Description: Sets the thread pool size for FastAPI/AnyIO blocking calls. By default (when set to `0`) FastAPI/AnyIO use `40` threads. In case of large instances and many concurrent users, it may be needed to increase `THREAD_POOL_SIZE` to prevent blocking.
 
 #### `SHOW_ADMIN_DETAILS`
 
@@ -209,7 +250,7 @@ This will run the Open WebUI on port `9999`. The `PORT` environment variable is 
 - Description: List of banners to show to users. The format for banners are:
 
 ```json
-[{"id": "string","type": "string [info, success, warning, error]","title": "string","content": "string","dismissible": False,"timestamp": 1000}]
+[{"id": "string", "type": "string [info, success, warning, error]", "title": "string", "content": "string", "dismissible": false, "timestamp": 1000}]
 ```
 
 - Persistence: This environment variable is a `PersistentConfig` variable.
@@ -228,8 +269,7 @@ WEBUI_BANNERS="[{\"id\": \"1\", \"type\": \"warning\", \"title\": \"Your message
 
 - Type: `bool`
 - Default: `False`
-- Description: Builds the Docker image with NVIDIA CUDA support. Enables GPU acceleration
-for local Whisper and embeddings.
+- Description: Builds the Docker image with NVIDIA CUDA support. Enables GPU acceleration for local Whisper and embeddings.
 
 #### `EXTERNAL_PWA_MANIFEST_URL`
 
@@ -257,6 +297,16 @@ for local Whisper and embeddings.
 - Default: Empty string (' '), since `None` is set as default.
 - Description: Specifies the SSL assert fingerprint to use.
 - Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `DEFAULT_PROMPT_SUGGESTIONS`
+
+- Type: `list` of `dict`
+- Default: `[]` (which means to use the built-in default prompt suggestions)
+- Description: List of prompt suggestions. The format for prompt suggestions are:
+
+```json
+[{"title": ["Title part 1", "Title part 2"], "content": "prompt"}]
+```
 
 ### AIOHTTP Client
 
@@ -436,6 +486,41 @@ JSON format: { "title": "your concise title here" }
 <chat_history>
 {{MESSAGES:END:2}}
 </chat_history>
+```
+
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `ENABLE_FOLLOW_UP_GENERATION`
+
+- Type: `bool`
+- Default: `True`
+- Description: Enables or disables follow up generation.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `FOLLOW_UP_GENERATION_PROMPT_TEMPLATE`
+
+- Type: `str`
+- Description: Prompt to use for generating several relevant follow-up questions.
+- Default: The value of `DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE` environment variable.
+
+`DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE`:
+
+```
+### Task:
+Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
+### Guidelines:
+- Write all follow-up questions from the user’s point of view, directed to the assistant.
+- Make questions concise, clear, and directly related to the discussed topic(s).
+- Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
+- If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
+- Use the conversation's primary language; default to English if multilingual.
+- Response must be a JSON array of strings, no extra text or formatting.
+### Output:
+JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"
 ```
 
 - Persistence: This environment variable is a `PersistentConfig` variable.
@@ -867,7 +952,7 @@ directly. Ensure that no users are present in the database if you intend to turn
 
 :::info
 
-When deploying Open-WebUI in a multiple-node cluster with a load balancer, you must ensure that the WEBUI_SECRET_KEY value is the same across all instances in order to enable users to continue working if a node is recycled or their session is transferred to a different node. Without it, they will need to sign in again each time the underlying node changes.
+When deploying Open WebUI in a multi-node/worker cluster with a load balancer, you must ensure that the WEBUI_SECRET_KEY value is the same across all instances in order to enable users to continue working if a node is recycled or their session is transferred to a different node. Without it, they will need to sign in again each time the underlying node changes.
 
 :::
 
@@ -875,7 +960,26 @@ When deploying Open-WebUI in a multiple-node cluster with a load balancer, you m
 
 - Type: `bool`
 - Default: `False`
-- Description: Enables or disables offline mode.
+- Description: Disables Open WebUI's network connections for update checks and automatic model downloads.
+
+:::info
+
+**Disabled when enabled:**
+
+- Automatic version update checks
+- Downloads of embedding models from Hugging Face Hub
+  - If you did not download an embedding model prior to activating `OFFLINE_MODE` any RAG, web search and document analysis functionality may not work properly
+- Update notifications in the UI
+
+**Still functional:**
+
+- External LLM API connections (OpenAI, etc.)
+- OAuth authentication providers
+- Web search and RAG with external APIs
+
+Read more about `offline mode` in this [guide](/docs/tutorials/offline-mode.md).
+
+:::
 
 #### `RESET_CONFIG_ON_START`
 
@@ -926,7 +1030,7 @@ modeling files for reranking.
 
 - Type: `str`
 - Options:
-- `chroma`, `elasticsearch`, `milvus`, `opensearch`, `pgvector`, `qdrant`
+- `chroma`, `elasticsearch`, `milvus`, `opensearch`, `pgvector`, `qdrant`, `pinecone`
 - Default: `chroma`
 - Description: Specifies which vector database system to use. This setting determines which vector storage system will be used for managing embeddings.
 
@@ -1050,6 +1154,43 @@ modeling files for reranking.
 - Default: `None`
 - Description: Specifies an optional connection token for Milvus.
 
+#### `MILVUS_INDEX_TYPE`
+
+- Type: `str`
+- Default: `HNSW`
+- Options: `AUTOINDEX`, `FLAT`, `IVF_FLAT`, `HNSW`
+- Description: Specifies the index type to use when creating a new collection in Milvus. `AUTOINDEX` is generally recommended for Milvus standalone. `HNSW` may offer better performance but typically requires a clustered Milvus setup.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `MILVUS_METRIC_TYPE`
+
+- Type: `str`
+- Default: `COSINE`
+- Options: `COSINE`, `IP`, `L2`
+- Description: Specifies the metric type for vector similarity search in Milvus.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `MILVUS_HNSW_M`
+
+- Type: `int`
+- Default: `16`
+- Description: Specifies the `M` parameter for the HNSW index type in Milvus. This influences the number of bi-directional links created for each new element during construction. Only applicable if `MILVUS_INDEX_TYPE` is `HNSW`.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `MILVUS_HNSW_EFCONSTRUCTION`
+
+- Type: `int`
+- Default: `100`
+- Description: Specifies the `efConstruction` parameter for the HNSW index type in Milvus. This influences the size of the dynamic list for the nearest neighbors during index construction. Only applicable if `MILVUS_INDEX_TYPE` is `HNSW`.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `MILVUS_IVF_FLAT_NLIST`
+
+- Type: `int`
+- Default: `128`
+- Description: Specifies the `nlist` parameter for the IVF_FLAT index type in Milvus. This is the number of cluster units. Only applicable if `MILVUS_INDEX_TYPE` is `IVF_FLAT`.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
 ### OpenSearch
 
 #### `OPENSEARCH_CERT_VERIFY`
@@ -1061,6 +1202,7 @@ modeling files for reranking.
 #### `OPENSEARCH_PASSWORD`
 
 - Type: `str`
+- Default: `None`
 - Description: Sets the password for OpenSearch.
 
 #### `OPENSEARCH_SSL`
@@ -1078,6 +1220,7 @@ modeling files for reranking.
 #### `OPENSEARCH_USERNAME`
 
 - Type: `str`
+- Default: `None`
 - Description: Sets the username for OpenSearch.
 
 ### PGVector
@@ -1106,6 +1249,98 @@ modeling files for reranking.
 - Type: `str`
 - Description: Sets the URI for Qdrant.
 
+#### `QDRANT_ON_DISK`
+
+- Type: `bool`
+- Default: `False`
+- Description: Enable the usage of memmap(also known as on-disk) storage
+
+#### `QDRANT_PREFER_GRPC`
+
+- Type: `bool`
+- Default: `False`
+- Description: Use gPRC interface whenever possible
+
+#### `QDRANT_GRPC_PORT`
+
+- Type: `int`
+- Default: `6334`
+- Description: Sets the gRPC port number for Qdrant.
+
+#### `ENABLE_QDRANT_MULTITENANCY_MODE`
+
+- Type: `bool`
+- Default: `False`
+- Description: Enables multitenancy pattern for Qdrant collections management, which significantly reduces RAM usage and computational overhead by consolidating similar vector data structures. Recommend turn on
+
+:::info
+
+This will disconect all Qdrant collections created in the previous pattern, which is non-multitenancy. Go to  `Admin Settings` > `Documents` > `Reindex Knowledge Base` to migrate existing knowledges.
+
+The Qdrant collections created in the previous pattern will still consume resources.
+
+Currently, there is no button in the UI to only reset the vector DB. If you want to migrate knowledge to multitenancy:
+- Remove all collections with the `open_webui-knowledge` prefix (or `open_webui` prefix to remove all collections related to Open WebUI) using the native Qdrant client
+- Go to `Admin Settings` > `Documents` > `Reindex Knowledge Base` to migrate existing knowledge base
+
+`Reindex Knowledge Base` will ONLY migrate the knowledge base
+
+:::
+
+:::danger
+
+If you decide to use the multitenancy pattern as your default and you don't need to migrate old knowledge, go to `Admin Settings` > `Documents` to reset vector and knowledge, which will delete all collections with the `open_webui` prefix and all stored knowledge.
+
+:::
+
+#### `QDRANT_COLLECTION_PREFIX`
+
+- Type: `str`
+- Default: `open-webui`
+- Description: Sets the prefix for Qdrant collection names. Useful for namespacing or isolating collections, especially in multitenancy mode. Changing this value will cause the application to use a different set of collections in Qdrant. Existing collections with a different prefix will not be affected.
+
+### Pinecone
+
+When using Pinecone as the vector store, the following environment variables are used to control its behavior. Make sure to set these variables in your `.env` file or deployment environment.
+
+#### `PINECONE_API_KEY`
+
+- Type: `str`
+- Default: `None`
+- Description: Sets the API key used to authenticate with the Pinecone service.
+
+#### `PINECONE_ENVIRONMENT`
+
+- Type: `str`
+- Default: `None`
+- Description: Specifies the Pinecone environment to connect to (e.g., `us-west1-gcp`, `gcp-starter`, etc.).
+
+#### `PINECONE_INDEX_NAME`
+
+- Type: `str`
+- Default: `open-webui-index`
+- Description: Defines the name of the Pinecone index that will be used to store and query vector embeddings.
+
+#### `PINECONE_DIMENSION`
+
+- Type: `int`
+- Default: `1536`
+- Description: The dimensionality of the vector embeddings. Must match the dimension expected by the index (commonly 768, 1024, 1536, or 3072 based on model used).
+
+#### `PINECONE_METRIC`
+
+- Type: `str`
+- Default: `cosine`
+- Options: `cosine`, `dotproduct`, `euclidean`
+- Description: Specifies the similarity metric to use for vector comparisons within the Pinecone index.
+
+#### `PINECONE_CLOUD`
+
+- Type: `str`
+- Default: `aws`
+- Options: `aws`, `gcp`, `azure`
+- Description: Specifies the cloud provider where the Pinecone index is hosted.
+
 ## RAG Content Extraction Engine
 
 #### `CONTENT_EXTRACTION_ENGINE`
@@ -1113,6 +1348,7 @@ modeling files for reranking.
 - Type: `str`
 - Options:
   - Leave empty to use default
+  - `external` - Use external loader
   - `tika` - Use a local Apache Tika server
   - `docling` - Use Docling engine
   - `document_intelligence` - Use Document Intelligence engine
@@ -1127,6 +1363,20 @@ modeling files for reranking.
 - Description: Specifies the Mistral OCR API key to use.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
+#### `EXTERNAL_DOCUMENT_LOADER_URL`
+
+- Type: `str`
+- Default: `None`
+- Description: Sets the URL for the external document loader service.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `EXTERNAL_DOCUMENT_LOADER_API_KEY`
+
+- Type: `str`
+- Default: `None`
+- Description: Sets the API key for authenticating with the external document loader service.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
 #### `TIKA_SERVER_URL`
 
 - Type: `str`
@@ -1139,6 +1389,22 @@ modeling files for reranking.
 - Type: `str`
 - Default: `http://docling:5001`
 - Description: Specifies the URL for the Docling server.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `DOCLING_OCR_ENGINE`
+
+- Type: `str`  
+- Default: `tesseract`  
+- Description: Specifies the OCR engine used by Docling.  
+  Supported values include: `tesseract` (default), `easyocr`, `ocrmac`, `rapidocr`, and `tesserocr`.  
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `DOCLING_OCR_LANG`
+
+- Type: `str`  
+- Default: `eng,fra,deu,spa` (when using the default `tesseract` engine)  
+- Description: Specifies the OCR language(s) to be used with the configured `DOCLING_OCR_ENGINE`.  
+  The format and available language codes depend on the selected OCR engine.  
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 ## Retrieval Augmented Generation (RAG)
@@ -1187,6 +1453,13 @@ modeling files for reranking.
 - Type: `float`
 - Default: `0.0`
 - Description: Sets the relevance threshold to consider for documents when used with reranking.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `RAG_HYBRID_BM25_WEIGHT`
+
+- Type: `float`
+- Default: `0.5`
+- Description: Sets the weight given to the keyword search (BM25) during hybrid search. 1 means only keyword serach, 0 means only vector search.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `RAG_TEMPLATE`
@@ -1291,6 +1564,18 @@ Provide a clear and direct response to the user's query, including inline citati
 When configuring `RAG_FILE_MAX_SIZE` and `RAG_FILE_MAX_COUNT`, ensure that the values are reasonable to prevent excessive file uploads and potential performance issues.
 
 :::
+
+#### `RAG_ALLOWED_FILE_EXTENSIONS`
+
+- Type: `list` of `str`
+- Default: `[]` (which means all supported file types are allowed)
+- Description: Specifies which file extensions are permitted for upload. 
+
+```json
+["pdf,docx,txt"]
+```
+
+- Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `RAG_RERANKING_MODEL`
 
@@ -1409,21 +1694,21 @@ Strictly return in JSON format:
 
 #### `RAG_EMBEDDING_CONTENT_PREFIX`
 
-- Type: 
+- Type: `str`
 - Default: `None`
 - Description: Specifies the prefix for the RAG embedding content.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `RAG_EMBEDDING_PREFIX_FIELD_NAME`
 
-- Type: 
+- Type: `str`
 - Default: `None`
 - Description: Specifies the field name for the RAG embedding prefix.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `RAG_EMBEDDING_QUERY_PREFIX`
 
-- Type: 
+- Type: `str`
 - Default: `None`
 - Description: Specifies the prefix for the RAG embedding query.
 - Persistence: This environment variable is a `PersistentConfig` variable.
@@ -1478,19 +1763,13 @@ When enabling `GOOGLE_DRIVE_INTEGRATION`, ensure that you have configured `GOOGL
 - Description: Specifies the client ID for OneDrive integration.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
-#### `QDRANT_ON_DISK`
-
-- Type: `bool`
-- Default: `False`
-- Description: Enable the usage of memmap(also known as on-disk) storage
-
 ## Web Search
 
 #### `ENABLE_WEB_SEARCH`
 
 - Type: `bool`
 - Default: `False`
-- Description: Enable web search toggle
+- Description: Enable web search toggle.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `ENABLE_SEARCH_QUERY_GENERATION`
@@ -1708,7 +1987,7 @@ the search query. Example: `http://searxng.local/search?q=<query>`
 - Default: `safe_web`
 - Description: Specifies the loader to use for retrieving and processing web content.
 - Options:
-  - '' - Uses the `requests` module with enhanced error handling.
+  - `requests` - Uses the Requests module with enhanced error handling.
   - `playwright` - Uses Playwright for more advanced web page rendering and interaction.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
@@ -1778,7 +2057,8 @@ Using a remote Playwright browser via `PLAYWRIGHT_WS_URL` can be beneficial for:
 
 - Type: `str`
 - Default: `en`
-- Description: Sets the language to use for YouTube video loading.
+- Description: Comma-separated list of language codes to try when fetching YouTube video transcriptions, in priority order.
+- Example: If set to `es,de`, Spanish transcriptions will be attempted first, then German if Spanish was not available, and lastly English. Note: If none of the specified languages are available and `en` was not in your list, the system will automatically try English as a final fallback.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 ## Audio
@@ -1810,6 +2090,12 @@ Using a remote Playwright browser via `PLAYWRIGHT_WS_URL` can be beneficial for:
 - Type: `bool`
 - Default: `False`
 - Description: Toggles automatic update of the Whisper model.
+
+#### `WHISPER_LANGUAGE`
+
+- Type: `str`
+- Default: `None`
+- Description: Specifies the ISO 639-1 language Whisper uses for STT (ISO 639-2 for Hawaiian and Cantonese). Whisper predicts the language by default.
 
 ### Speech-to-Text (OpenAI)
 
@@ -2257,9 +2543,21 @@ Strictly return in JSON format:
 - Type: `bool`
 - Default: `False`
 - Description: If enabled, merges OAuth accounts with existing accounts using the same email
-address. This is considered unsafe as not all OAuth providers will verify email addresses and can lead to
-potential account takeovers.
+address. This is considered unsafe as not all OAuth providers will verify email addresses and can lead to potential account takeovers.
 - Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `OAUTH_UPDATE_PICTURE_ON_LOGIN`
+
+- Type: `bool`
+- Default: `False`
+- Description: If enabled, updates the local user profile picture with the OAuth-provided picture on login.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+::info
+
+If the OAuth picture claim is disabled by setting `OAUTH_PICTURE_CLAIM` to `''` (empty string), then setting this variable to `true` will not update the user profile pictures.
+
+:::
 
 #### `WEBUI_AUTH_TRUSTED_EMAIL_HEADER`
 
@@ -2279,13 +2577,13 @@ See https://support.google.com/cloud/answer/6158849?hl=en
 #### `GOOGLE_CLIENT_ID`
 
 - Type: `str`
-- Description: Sets the client ID for Google OAuth
+- Description: Sets the client ID for Google OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `GOOGLE_CLIENT_SECRET`
 
 - Type: `str`
-- Description: Sets the client secret for Google OAuth
+- Description: Sets the client secret for Google OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `GOOGLE_OAUTH_SCOPE`
@@ -2299,7 +2597,7 @@ See https://support.google.com/cloud/answer/6158849?hl=en
 
 - Type: `str`
 - Default: `<backend>/oauth/google/callback`
-- Description: Sets the redirect URI for Google OAuth
+- Description: Sets the redirect URI for Google OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 ### Microsoft
@@ -2309,19 +2607,19 @@ See https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-registe
 #### `MICROSOFT_CLIENT_ID`
 
 - Type: `str`
-- Description: Sets the client ID for Microsoft OAuth
+- Description: Sets the client ID for Microsoft OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `MICROSOFT_CLIENT_SECRET`
 
 - Type: `str`
-- Description: Sets the client secret for Microsoft OAuth
+- Description: Sets the client secret for Microsoft OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `MICROSOFT_CLIENT_TENANT_ID`
 
 - Type: `str`
-- Description: Sets the tenant ID for Microsoft OAuth
+- Description: Sets the tenant ID for Microsoft OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `MICROSOFT_OAUTH_SCOPE`
@@ -2335,7 +2633,7 @@ See https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-registe
 
 - Type: `str`
 - Default: `<backend>/oauth/microsoft/callback`
-- Description: Sets the redirect URI for Microsoft OAuth
+- Description: Sets the redirect URI for Microsoft OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 ### GitHub
@@ -2345,7 +2643,7 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 #### `GITHUB_CLIENT_ID`
 
 - Type: `str`
-- Description: Sets the client ID for GitHub OAuth
+- Description: Sets the client ID for GitHub OAuth.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `GITHUB_CLIENT_SECRET`
@@ -2373,13 +2671,13 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 #### `OAUTH_CLIENT_ID`
 
 - Type: `str`
-- Description: Sets the client ID for OIDC
+- Description: Sets the client ID for OIDC.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `OAUTH_CLIENT_SECRET`
 
 - Type: `str`
-- Description: Sets the client secret for OIDC
+- Description: Sets the client secret for OIDC.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `OPENID_PROVIDER_URL`
@@ -2436,6 +2734,12 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 - Default: `picture`
 - Description: Set picture (avatar) claim for OpenID.
 - Persistence: This environment variable is a `PersistentConfig` variable.
+
+::info
+
+If `OAUTH_PICTURE_CLAIM` is set to `''` (empty string), then the OAuth picture claim is disabled and the user profile pictures will not be saved.
+
+:::
 
 #### `OAUTH_GROUP_CLAIM`
 
@@ -2572,11 +2876,38 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 - Description: Sets the path to the LDAP CA certificate file.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
+#### `LDAP_VALIDATE_CERT`
+
+- Type: `bool`
+- Description: Sets whether to validate the LDAP CA certificate.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
 #### `LDAP_CIPHERS`
 
 - Type: `str`
 - Default: `ALL`
 - Description: Sets the ciphers to use for LDAP connection.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `ENABLE_LDAP_GROUP_MANAGEMENT`
+
+- Type: `bool`
+- Default: `False`
+- Description: Enables the group management feature.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `ENABLE_LDAP_GROUP_CREATION`
+
+- Type: `bool`
+- Default: `False`
+- Description: If a group from LDAP does not exist in Open WebUI, it will be created automatically.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `LDAP_ATTRIBUTE_FOR_GROUPS`
+
+- Type: `str`
+- Default: `memberOf`
+- Description: Specifies the LDAP attribute that contains the user's group memberships. `memberOf` is a standard attribute for this purpose in Active Directory environments.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 ## User Permissions
@@ -2585,7 +2916,7 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 
 #### `USER_PERMISSIONS_CHAT_CONTROLS`
 
-- Type: `str`
+- Type: `bool`
 - Default: `True`
 - Description: Enables or disables user permission to access chat controls.
 - Persistence: This environment variable is a `PersistentConfig` variable.
@@ -2613,14 +2944,14 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 
 #### `USER_PERMISSIONS_CHAT_STT`
 
-- Type: `str`
+- Type: `bool`
 - Default: `True`
 - Description: Enables or disables user permission to use Speech-to-Text in chats.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 #### `USER_PERMISSIONS_CHAT_TTS`
 
-- Type: `str`
+- Type: `bool`
 - Default: `True`
 - Description: Enables or disables user permission to use Text-to-Speech in chats.
 - Persistence: This environment variable is a `PersistentConfig` variable.
@@ -2651,6 +2982,13 @@ See https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-o
 - Type: `str`
 - Default: `False`
 - Description: Enables or disables enforced temporary chats for users.
+- Persistence: This environment variable is a `PersistentConfig` variable.
+
+#### `USER_PERMISSIONS_CHAT_SYSTEM_PROMPT`
+
+- Type: `str`
+- Default: `True`
+- Description: Allows or disallows users to set a custom system prompt for all of their chats.
 - Persistence: This environment variable is a `PersistentConfig` variable.
 
 ### Feature Permissions
@@ -2801,6 +3139,12 @@ These variables are not specific to Open WebUI but can still be valuable in cert
 - Default: `False`
 - Description: Specifies whether to use the accelerated endpoint for S3 storage.
 
+#### `S3_ENABLE_TAGGING`
+
+- Type: `str`
+- Default: `False`
+- Description: Enables S3 object tagging after uploads for better organization, searching, and integration with file management policies. Always set to `False` when using Cloudflare R2, as R2 does not support object tagging.
+
 #### Google Cloud Storage
 
 #### `GOOGLE_APPLICATION_CREDENTIALS_JSON`
@@ -2846,13 +3190,21 @@ These variables are not specific to Open WebUI but can still be valuable in cert
 Supports SQLite and Postgres. Changing the URL does not migrate data between databases.
 Documentation on the URL scheme is available available [here](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls).
 
+If your database password contains special characters, please ensure they are properly URL-encoded. For example, a password like `p@ssword` should be encoded as `p%40ssword`.
+
 :::
+
+#### `DATABASE_SCHEMA`
+
+- Type: `str`
+- Default: `None`
+- Description: Specifies the database schema to connect to.
 
 #### `DATABASE_POOL_SIZE`
 
 - Type: `int`
-- Default: `0`
-- Description: Specifies the size of the database pool. A value of `0` disables pooling.
+- Default: `None`
+- Description: Specifies the pooling strategy and size of the database pool. By default SQLAlchemy will automatically chose the proper pooling strategy for the selected database connection. A value of `0` disables pooling. A value larger `0` will set the pooling strategy to `QueuePool` and the pool size accordingly.
 
 #### `DATABASE_POOL_MAX_OVERFLOW`
 
@@ -2896,11 +3248,12 @@ More information about this setting can be found [here](https://docs.sqlalchemy.
 
 - Type: `str`
 - Example: `redis://localhost:6379/0`
-- Description: Specifies the URL of the Redis instance for the app-state.
+- Example with TLS: `rediss://localhost:6379/0`
+- Description: Specifies the URL of the Redis instance for the app state.
 
 :::info
 
-When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that the REDIS_URL value is set. Without it, session, persistency and consistency issues in the app-state will occur as the workers would be unable to communicate.
+When deploying Open WebUI in a multi-node/worker cluster with a load balancer, you must ensure that the REDIS_URL value is set. Without it, session, persistency and consistency issues in the app state will occur as the workers would be unable to communicate.
 
 :::
 
@@ -2915,15 +3268,21 @@ When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that t
 - Default: `26379`
 - Description: Sentinel port for app state Redis.
 
+#### `REDIS_KEY_PREFIX`
+
+- Type: `str`
+- Default: `open-webui`
+- Description: Customizes the Redis key prefix used for storing configuration values. This allows multiple Open WebUI instances to share the same Redis instance without key conflicts. When operating in Redis cluster mode, the prefix is formatted as `{prefix}:` (e.g., `{open-webui}:config:*`) to enable multi-key operations on configuration keys within the same hash slot.
+
 #### `ENABLE_WEBSOCKET_SUPPORT`
 
 - Type: `bool`
-- Default: `False`
-- Description: Enables websocket support in Open WebUI (used with Redis).
+- Default: `True`
+- Description: Enables websocket support in Open WebUI.
 
 :::info
 
-When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that the ENABLE_WEBSOCKET_SUPPORT value is set. Without it, websocket consistency and persistency issues will occur.
+When deploying Open WebUI in a multi-node/worker cluster with a load balancer, you must ensure that the ENABLE_WEBSOCKET_SUPPORT value is set. Without it, websocket consistency and persistency issues will occur.
 
 :::
 
@@ -2935,7 +3294,7 @@ When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that t
 
 :::info
 
-When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that the WEBSOCKET_MANAGER value is set and a key-value NoSQL database like Redis is used. Without it, websocket consistency and persistency issues will occur.
+When deploying Open WebUI in a multi-node/worker cluster with a load balancer, you must ensure that the WEBSOCKET_MANAGER value is set and a key-value NoSQL database like Redis is used. Without it, websocket consistency and persistency issues will occur.
 
 :::
 
@@ -2947,7 +3306,7 @@ When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that t
 
 :::info
 
-When deploying Open-WebUI in a multi-node/worker cluster, you must ensure that the WEBSOCKET_REDIS_URL value is set and a key-value NoSQL database like Redis is used. Without it, websocket consistency and persistency issues will occur.
+When deploying Open WebUI in a multi-node/worker cluster with a load balancer, you must ensure that the WEBSOCKET_REDIS_URL value is set and a key-value NoSQL database like Redis is used. Without it, websocket consistency and persistency issues will occur.
 
 :::
 

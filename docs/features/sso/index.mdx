@@ -21,6 +21,9 @@ There are several global configuration options for OAuth:
 1. `ENABLE_OAUTH_SIGNUP` - if `true`, allows accounts to be created when logging in with OAuth. Distinct from `ENABLE_SIGNUP`.
 1. `OAUTH_MERGE_ACCOUNTS_BY_EMAIL` - allows logging into an account that matches the email address provided by the OAuth provider.
     - This is considered insecure as not all OAuth providers verify email addresses, and may allow accounts to be hijacked.
+1. `OAUTH_UPDATE_PICTURE_ON_LOGIN` - if `true`, users will have OAuth-provided profile pictures updated on login.
+    - If the OAuth picture claim is disabled by setting `OAUTH_PICTURE_CLAIM` to the empty string, this configuration will be ignored.
+1. `OAUTH_PICTURE_CLAIM` - can be used to customize or disable profile picture storage. The default, `picture`, will work for most providers; if set to the empty string, all users will receive the default person profile picture.
 
 ### Google
 
@@ -35,15 +38,16 @@ The following environment variables are required:
 ### Microsoft
 
 To configure a Microsoft OAuth client, please refer to [Microsoft's documentation](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) on how to create a Microsoft OAuth client for a **web application**.
-The allowed redirect URI should include `<open-webui>/oauth/microsoft/callback`.
+The allowed redirect URI should include `<open-webui>/oauth/microsoft/callback`. This value should be used for the `MICROSOFT_REDIRECT_URI` environment variable.
 
 Support for Microsoft OAuth is currently limited to a single tenant, that is a single Entra organization or personal Microsoft accounts.
 
 The following environment variables are required:
 
 1. `MICROSOFT_CLIENT_ID` - Microsoft OAuth client ID
-1. `MICROSOFT_CLIENT_SECRET` - Microsoft OAuth client secret
-1. `MICROSOFT_CLIENT_TENANT_ID` - Microsoft tenant ID - use `9188040d-6c67-4c5b-b112-36a304b66dad` for personal accounts
+2. `MICROSOFT_CLIENT_SECRET` - Microsoft OAuth client secret
+3. `MICROSOFT_CLIENT_TENANT_ID` - Microsoft tenant ID - use `9188040d-6c67-4c5b-b112-36a304b66dad` for personal accounts
+4. `MICROSOFT_REDIRECT_URI` - The redirect URI configured in your Microsoft OAuth application. This must be set to `<open-webui>/oauth/microsoft/callback`.
 
 ### Github
 
